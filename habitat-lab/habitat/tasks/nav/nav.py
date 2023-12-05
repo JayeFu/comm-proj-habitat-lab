@@ -6,7 +6,7 @@
 
 # TODO, lots of typing errors in here
 
-from typing import TYPE_CHECKING, Any, List, Optional, Sequence, Tuple, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Sequence, Tuple, Union
 
 import attr
 import numpy as np
@@ -38,6 +38,7 @@ from habitat.utils.geometry_utils import (
     quaternion_from_coeff,
     quaternion_rotate_vector,
 )
+from habitat.utils.runtime_objs import RunTimeObjectManager
 from habitat.utils.visualizations import fog_of_war, maps
 
 try:
@@ -107,6 +108,21 @@ class NavigationEpisode(Episode):
     )
     start_room: Optional[str] = None
     shortest_paths: Optional[List[List[ShortestPathPoint]]] = None
+
+
+@attr.s(auto_attribs=True, kw_only=True)
+class TargetNavigationEpisode(NavigationEpisode):
+    r"""Class for episode specification that additionally includes target
+    asset and scene layout
+
+    Args:
+        target_id: id of target asset
+        obstacle_layout_id: id of obstacle layout
+    """
+
+    target_id: str = attr.ib(default=None, validator=not_none_validator)
+    scene_layout_id: str = attr.ib(default=None, validator=not_none_validator)
+    scene_layout: Optional[Dict[str, Any]] = None
 
 
 @registry.register_sensor
@@ -504,6 +520,179 @@ class ProximitySensor(Sensor):
         )
 
 
+@registry.register_sensor
+class DesignParameterSensor(Sensor):
+    cls_uuid: str = "design_parameter"
+
+    def __init__(self, sim, config, *args: Any, **kwargs: Any):
+        self._sim = sim
+
+        self._names = list(getattr(config, "names"))
+        self._indices = list(getattr(config, "indices"))
+        self._minimums = np.array(getattr(config, "minimums"), dtype=np.float32)
+        self._maximums = np.array(getattr(config, "maximums"), dtype=np.float32)
+
+        assert len(self._names) == len(self._indices) == len(self._minimums) == len(self._maximums), \
+            f"values ({len(self._names)}), " \
+            f"indices ({len(self._indices)}), " \
+            f"minimums ({len(self._minimums)}), " \
+            f"and maximums ({len(self._maximums)}) must be the same length"
+        self._validate_values()
+
+        self._mean = (self._minimums + self._maximums) / 2
+        self._scale = (self._maximums - self._minimums) / 2
+
+        super().__init__(config=config)
+
+    def _validate_values(self):
+        habitat_config = self._sim.habitat_config
+
+        for v_name, v_idx in zip(self._names, self._indices):
+            try:
+                _ = self._get_info(
+                    config=habitat_config, 
+                    name=v_name, 
+                    idx=v_idx
+                )
+            except Exception as e:
+                logger.error(f"Error in {v_name} with index {v_idx}")
+                raise e
+
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
+        return self.cls_uuid
+    
+    def _get_sensor_type(self, *args: Any, **kwargs: Any):
+        return SensorTypes.MEASUREMENT
+
+    def _get_observation_space(self, *args: Any, **kwargs: Any):
+        sensor_shape = (len(self._names),)
+
+        return spaces.Box(
+            low=self._minimums,
+            high=self._maximums,
+            shape=sensor_shape,
+            dtype=np.float32,
+        )
+    
+    def get_observation(
+        self, observations, episode, *args: Any, **kwargs: Any
+    ) -> Any:
+        habitat_config = self._sim.habitat_config
+
+        obs = np.zeros(len(self._names), dtype=np.float32)
+        for idx, (v_name, v_idx) in enumerate(zip(self._names, self._indices)):
+            obs[idx] = self._get_info(
+                config=habitat_config, 
+                name=v_name, 
+                idx=v_idx
+            )
+
+        obs = (obs - self._mean) / self._scale
+
+        return obs
+
+    @staticmethod
+    def _get_info(config: "DictConfig", name: str, idx: int):
+        attribute_seq = name.split(".")
+
+        res = None
+        for at in attribute_seq:
+            if res is None:
+                res = getattr(config, at)
+            else:
+                res = getattr(res, at)
+
+        if idx > -0.5:  # -1 means no indexing
+            res = res[idx]
+
+        return res
+
+
+@registry.register_sensor
+class CameraRotationSensor(Sensor):
+    cls_uuid: str = "camera_rotation"
+
+    def __init__(self, sim, config, *args: Any, **kwargs: Any):
+        self._sim = sim
+
+        # HACK: now we have only 1 agent per scene
+        # TODO: consider multiple agents per scene
+        agent_config = get_agent_config(self._sim.habitat_config)
+        self._num_cams = len(agent_config.sim_sensors)
+        self._cam_uuids = [sensor_uuid for sensor_uuid in self._sim.sensor_suite.sensors]
+
+        super().__init__(config=config)
+
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
+        return self.cls_uuid
+
+    def _get_sensor_type(self, *args: Any, **kwargs: Any):
+        return SensorTypes.MEASUREMENT
+
+    def _get_observation_space(self, *args: Any, **kwargs: Any):
+        sensor_shape = (self._num_cams, 4)  # returns quaternion
+
+        return spaces.Box(
+            low=np.finfo(np.float32).min,
+            high=np.finfo(np.float32).max,
+            shape=sensor_shape,
+            dtype=np.float32,
+        )
+
+    def get_observation(
+        self, observations, episode, *args: Any, **kwargs: Any
+    ) -> Any:
+        agent_state = self._sim.get_agent_state()
+        sensor_states = agent_state.sensor_states
+
+        sensor_rotations = []
+        for k in self._cam_uuids:
+            rot_quat = sensor_states[k].rotation
+            rot_arr = np.array([rot_quat.real, *rot_quat.imag])
+
+            sensor_rotations.append(rot_arr)
+
+        return np.stack(sensor_rotations, axis=0).astype(np.float32)
+
+
+@registry.register_sensor
+class AgentRotationSensor(Sensor):
+    cls_uuid: str = "agent_state"
+
+    def __init__(self, sim, config, *args: Any, **kwargs: Any):
+        self._sim = sim
+
+        super().__init__(config=config)
+
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
+        return self.cls_uuid
+
+    def _get_sensor_type(self, *args: Any, **kwargs: Any):
+        return SensorTypes.MEASUREMENT
+
+    def _get_observation_space(self, *args: Any, **kwargs: Any):
+        sensor_shape = (1, 4)
+        return spaces.Box(
+            low=np.finfo(np.float32).min,
+            high=np.finfo(np.float32).max,
+            shape=sensor_shape,
+            dtype=np.float32,
+        )
+
+    def get_observation(
+        self, observations, episode, *args: Any, **kwargs: Any
+    ) -> Any:
+        # HACK: now we have only 1 agent per scene
+        # TODO: consider multiple agents per scene
+        agent_state = self._sim.get_agent_state()
+
+        # quaternion.quaternion is w first, i.e., (w, x, y, z)
+        rotation = agent_state.rotation  # type: quaternion.quaternion
+        rotation_arr = np.array([rotation.real, *rotation.imag])
+
+        return rotation_arr.reshape(1, 4).astype(np.float32)
+
+
 @registry.register_measure
 class Success(Measure):
     r"""Whether or not the agent succeeded at its task
@@ -535,6 +724,49 @@ class Success(Measure):
     ):
         distance_to_target = task.measurements.measures[
             DistanceToGoal.cls_uuid
+        ].get_metric()
+
+        if (
+            hasattr(task, "is_stop_called")
+            and task.is_stop_called  # type: ignore
+            and distance_to_target < self._config.success_distance
+        ):
+            self._metric = 1.0
+        else:
+            self._metric = 0.0
+
+
+@registry.register_measure
+class EuclideanSuccess(Measure):
+    r"""Whether or not the agent succeeded at its task
+
+    This measure depends on DistanceToGoal measure.
+    """
+
+    cls_uuid: str = "euclidean_success"
+
+    def __init__(
+        self, sim: Simulator, config: "DictConfig", *args: Any, **kwargs: Any
+    ):
+        self._sim = sim
+        self._config = config
+
+        super().__init__()
+
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
+        return self.cls_uuid
+
+    def reset_metric(self, episode, task, *args: Any, **kwargs: Any):
+        task.measurements.check_measure_dependencies(
+            self.uuid, [EuclideanDistanceToGoal.cls_uuid]
+        )
+        self.update_metric(episode=episode, task=task, *args, **kwargs)  # type: ignore
+
+    def update_metric(
+        self, episode, task: EmbodiedTask, *args: Any, **kwargs: Any
+    ):
+        distance_to_target = task.measurements.measures[
+            EuclideanDistanceToGoal.cls_uuid
         ].get_metric()
 
         if (
@@ -655,6 +887,54 @@ class SoftSPL(SPL):
             self._start_end_episode_distance
             / max(
                 self._start_end_episode_distance, self._agent_episode_distance
+            )
+        )
+
+
+@registry.register_measure
+class EuclideanSPL(SPL):
+    r"""Euclidean SPL
+
+    Similar to spl with Euclidean success
+    """
+
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
+        return "euclidean_spl"
+
+    def reset_metric(self, episode, task, *args: Any, **kwargs: Any):
+        task.measurements.check_measure_dependencies(
+            self.uuid,
+            [DistanceToGoal.cls_uuid,
+             EuclideanDistanceToGoal.cls_uuid,
+             EuclideanSuccess.cls_uuid]
+        )
+
+        self._previous_position = self._sim.get_agent_state().position
+        self._agent_episode_distance = 0.0
+        self._start_end_episode_distance = task.measurements.measures[
+            DistanceToGoal.cls_uuid
+        ].get_metric()
+        self.update_metric(  # type:ignore
+            episode=episode, task=task, *args, **kwargs
+        )
+
+    def update_metric(
+        self, episode, task: EmbodiedTask, *args: Any, **kwargs: Any
+    ):
+        ep_euclidean_success = \
+            task.measurements.measures[EuclideanSuccess.cls_uuid].get_metric()
+
+        current_position = self._sim.get_agent_state().position
+        self._agent_episode_distance += self._euclidean_distance(
+            current_position, self._previous_position
+        )
+
+        self._previous_position = current_position
+
+        self._metric = ep_euclidean_success * (
+            self._start_end_episode_distance
+            / max(
+            self._start_end_episode_distance, self._agent_episode_distance
             )
         )
 
@@ -1007,6 +1287,63 @@ class DistanceToGoal(Measure):
                 current_position[2],
             )
             self._metric = distance_to_target
+
+
+@registry.register_measure
+class EuclideanDistanceToGoal(Measure):
+    """The measure calculates a euclidean distance towards the goal."""
+
+    cls_uuid: str = "euclidean_distance_to_goal"
+
+    def __init__(
+        self, sim: Simulator, config: "DictConfig", *args: Any, **kwargs: Any
+    ):
+        self._previous_position: Optional[Tuple[float, float, float]] = None
+        self._sim = sim
+        self._config = config
+
+        super().__init__(**kwargs)
+
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
+        return self.cls_uuid
+
+    def reset_metric(self, episode, *args: Any, **kwargs: Any) -> None:
+        self._previous_position = None
+        self._metric = None
+        self.update_metric(episode=episode, *args, **kwargs)  # type: ignore
+
+    def update_metric(
+        self, episode: NavigationEpisode, *args: Any, **kwargs: Any
+    ):
+        current_position = self._sim.get_agent_state().position
+
+        if self._previous_position is None or not np.allclose(
+            self._previous_position, current_position, atol=1e-4
+        ):
+            distance_to_target = 0
+            for i in range(len(episode.goals)):
+                if i == 0:
+                    incre_dist = self._euclidean_distance(
+                        current_position, episode.goals[0].position
+                    )
+                else:
+                    incre_dist = self._euclidean_distance(
+                        episode.goals[i - 1].position, episode.goals[i].position
+                    )
+                distance_to_target += incre_dist
+
+            self._previous_position = (
+                current_position[0],
+                current_position[1],
+                current_position[2],
+            )
+            self._metric = distance_to_target
+
+    @staticmethod
+    def _euclidean_distance(pos1, pos2):
+        return np.linalg.norm(
+            np.array(pos2) - np.array(pos1), ord=2
+        )
 
 
 @registry.register_measure
