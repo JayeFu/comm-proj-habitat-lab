@@ -6,8 +6,9 @@ defaults:
       - turn_right
   - measurements:
       - distance_to_goal
-      - success
-      - spl
+      - euclidean_distance_to_goal
+      - nonstop_euclidean_success
+      - nonstop_euclidean_spl
       - distance_to_goal_reward
       - top_down_map
   - _self_
