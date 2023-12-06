@@ -375,6 +375,18 @@ class SuccessMeasurementConfig(MeasurementConfig):
 
 
 @dataclass
+class EuclideanSuccessMeasurementConfig(MeasurementConfig):
+    type: str = "EuclideanSuccess"
+    success_distance: float = 0.8
+
+
+@dataclass
+class NonStopEuclideanSuccessMeasurementConfig(MeasurementConfig):
+    type: str = "NonStopEuclideanSuccess"
+    success_distance: float = 0.8
+
+
+@dataclass
 class SPLMeasurementConfig(MeasurementConfig):
     type: str = "SPL"
 
@@ -382,6 +394,16 @@ class SPLMeasurementConfig(MeasurementConfig):
 @dataclass
 class SoftSPLMeasurementConfig(MeasurementConfig):
     type: str = "SoftSPL"
+
+
+@dataclass
+class EuclideanSPLMeasurementConfig(MeasurementConfig):
+    type: str = "EuclideanSPL"
+
+
+@dataclass
+class NonStopEuclideanSPLMeasurementConfig(MeasurementConfig):
+    type: str = "NonStopEuclideanSPL"
 
 
 @dataclass
@@ -682,6 +704,10 @@ class DistanceToGoalMeasurementConfig(MeasurementConfig):
     type: str = "DistanceToGoal"
     distance_to: str = "POINT"
 
+
+@dataclass
+class EuclideanDistanceToGoalMeasurementConfig(MeasurementConfig):
+    type: str = "EuclideanDistanceToGoal"
 
 @dataclass
 class DistanceToGoalRewardMeasurementConfig(MeasurementConfig):
@@ -1425,6 +1451,12 @@ cs.store(
     node=DistanceToGoalMeasurementConfig,
 )
 cs.store(
+    package="habitat.task.measurements.euclidean_distance_to_goal",
+    group="habitat/task/measurements",
+    name="euclidean_distance_to_goal",
+    node=EuclideanDistanceToGoalMeasurementConfig,
+)
+cs.store(
     package="habitat.task.measurements.distance_to_goal_reward",
     group="habitat/task/measurements",
     name="distance_to_goal_reward",
@@ -1437,6 +1469,18 @@ cs.store(
     node=SuccessMeasurementConfig,
 )
 cs.store(
+    package="habitat.task.measurements.euclidean_success",
+    group="habitat/task/measurements",
+    name="euclidean_success",
+    node=EuclideanSuccessMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.nonstop_euclidean_success",
+    group="habitat/task/measurements",
+    name="nonstop_euclidean_success",
+    node=NonStopEuclideanSuccessMeasurementConfig,
+)
+cs.store(
     package="habitat.task.measurements.spl",
     group="habitat/task/measurements",
     name="spl",
@@ -1447,6 +1491,18 @@ cs.store(
     group="habitat/task/measurements",
     name="soft_spl",
     node=SoftSPLMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.euclidean_spl",
+    group="habitat/task/measurements",
+    name="euclidean_spl",
+    node=EuclideanSPLMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.nonstop_euclidean_spl",
+    group="habitat/task/measurements",
+    name="nonstop_euclidean_spl",
+    node=NonStopEuclideanSPLMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.num_steps",
