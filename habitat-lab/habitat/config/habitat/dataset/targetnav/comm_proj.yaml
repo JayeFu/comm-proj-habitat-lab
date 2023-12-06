@@ -1,0 +1,9 @@
+# @package habitat.dataset
+
+defaults:
+  - /habitat/dataset: dataset_config_schema
+  - _self_
+
+type: TargetNav-v0
+split: train
+data_path: data/datasets/targetnav/empty_room_20_20/len_2.0_rem_0.6/{split}/{split}.json.gz

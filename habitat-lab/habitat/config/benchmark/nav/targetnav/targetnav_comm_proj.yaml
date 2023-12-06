@@ -1,0 +1,5 @@
+# @package _global_
+
+defaults:
+  - targetnav_base
+  - /habitat/dataset/targetnav: comm_proj
