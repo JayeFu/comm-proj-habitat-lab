@@ -27,13 +27,15 @@ habitat_baselines:
   eval_ckpt_path_dir: "data/new_checkpoints"
   num_environments: 10
   checkpoint_folder: "data/new_checkpoints"
-  num_updates: -1
-  total_num_steps: 10e6
+  num_updates: 5000
+  total_num_steps: -1
   log_interval: 25
+  video_interval: 150
   num_checkpoints: 20
   # Force PyTorch to be single threaded as
   # this improves performance considerably
   force_torch_single_threaded: True
+  launch_eval_afterwards: True
 
   eval:
     video_option: [ ]
