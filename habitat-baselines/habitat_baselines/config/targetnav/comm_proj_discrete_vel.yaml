@@ -1,0 +1,12 @@
+# @package _global_
+
+defaults:
+  - comm_proj_discrete
+  - override /habitat/task/actions:
+    - full_vel_move_forward
+    - half_vel_move_forward
+    - full_vel_turn_left
+    - half_vel_turn_left
+    - full_vel_turn_right
+    - half_vel_turn_right
+  - _self_
