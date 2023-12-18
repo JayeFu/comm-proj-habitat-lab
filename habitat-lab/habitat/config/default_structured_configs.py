@@ -85,13 +85,17 @@ class TeleportActionConfig(ActionConfig):
     type: str = "TeleportAction"
 
 
+# For turtlebot, the 
+# max linear velocity is 0.31 m/s
+# max angular velocity is 1.90 rad/s = 108.9 deg/s
+# But 108.9 deg/s seems to be too fast, so I just set it to 30 deg/s
 @dataclass
 class VelocityControlActionConfig(ActionConfig):
     type: str = "VelocityAction"
     # meters/sec
-    lin_vel_range: List[float] = field(default_factory=lambda: [0.0, 0.25])
+    lin_vel_range: List[float] = field(default_factory=lambda: [0.0, 0.31])
     # deg/sec
-    ang_vel_range: List[float] = field(default_factory=lambda: [-10.0, 10.0])
+    ang_vel_range: List[float] = field(default_factory=lambda: [-30.0, 30.0])
     min_abs_lin_speed: float = 0.025  # meters/sec
     min_abs_ang_speed: float = 1.0  # # deg/sec
     time_step: float = 1.0  # seconds
