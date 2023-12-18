@@ -96,6 +96,35 @@ class VelocityControlActionConfig(ActionConfig):
     min_abs_ang_speed: float = 1.0  # # deg/sec
     time_step: float = 1.0  # seconds
 
+@dataclass
+class FullVelocityMoveForwardActionConfig(VelocityControlActionConfig):
+    type: str = "FullVelocityMoveForwardAction"
+
+
+@dataclass
+class HalfVelocityMoveForwardActionConfig(VelocityControlActionConfig):
+    type: str = "HalfVelocityMoveForwardAction"
+
+
+@dataclass
+class FullVelocityTurnLeftActionConfig(VelocityControlActionConfig):
+    type: str = "FullVelocityTurnLeftAction"
+
+
+@dataclass
+class HalfVelocityTurnLeftActionConfig(VelocityControlActionConfig):
+    type: str = "HalfVelocityTurnLeftAction"
+
+
+@dataclass
+class FullVelocityTurnRightActionConfig(VelocityControlActionConfig):
+    type: str = "FullVelocityTurnRightAction"
+
+
+@dataclass
+class HalfVelocityTurnRightActionConfig(VelocityControlActionConfig):
+    type: str = "HalfVelocityTurnRightAction"
+
 
 # -----------------------------------------------------------------------------
 # # REARRANGE actions
@@ -1163,6 +1192,42 @@ cs.store(
     group="habitat/task/actions",
     name="turn_right",
     node=TurnRightActionConfig,
+)
+cs.store(
+    package="habitat.task.actions.full_vel_move_forward",
+    group="habitat/task/actions",
+    name="full_vel_move_forward",
+    node=FullVelocityMoveForwardActionConfig,
+)
+cs.store(
+    package="habitat.task.actions.half_vel_move_forward",
+    group="habitat/task/actions",
+    name="half_vel_move_forward",
+    node=HalfVelocityMoveForwardActionConfig,
+)
+cs.store(
+    package="habitat.task.actions.full_vel_turn_left",
+    group="habitat/task/actions",
+    name="full_vel_turn_left",
+    node=FullVelocityTurnLeftActionConfig,
+)
+cs.store(
+    package="habitat.task.actions.half_vel_turn_left",
+    group="habitat/task/actions",
+    name="half_vel_turn_left",
+    node=HalfVelocityTurnLeftActionConfig,
+)
+cs.store(
+    package="habitat.task.actions.full_vel_turn_right",
+    group="habitat/task/actions",
+    name="full_vel_turn_right",
+    node=FullVelocityTurnRightActionConfig,
+)
+cs.store(
+    package="habitat.task.actions.half_vel_turn_right",
+    group="habitat/task/actions",
+    name="half_vel_turn_right",
+    node=HalfVelocityTurnRightActionConfig,
 )
 cs.store(
     package="habitat.task.actions.look_up",
