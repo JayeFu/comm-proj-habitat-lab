@@ -379,6 +379,8 @@ class PPOTrainer(BaseRLTrainer):
             disable_logging=self._disable_logging,
         )
 
+        self._save_config()
+
     @rank0_only
     @profiling_wrapper.RangeContext("save_checkpoint")
     def save_checkpoint(
@@ -951,6 +953,11 @@ class PPOTrainer(BaseRLTrainer):
                 self._train_utils.launch_evaluation_after_training(
                     writer=writer,
                 )
+
+    def _save_config(self):
+        log_dir = os.path.dirname(self.config.habitat_baselines.log_file)
+        save_cfg_fp = os.path.join(log_dir, "exp_cfg.yaml")
+        OmegaConf.save(self.config, save_cfg_fp)
 
     def _eval_checkpoint(
         self,
