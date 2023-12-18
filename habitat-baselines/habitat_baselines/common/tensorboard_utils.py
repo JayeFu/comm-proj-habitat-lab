@@ -119,6 +119,9 @@ class WeightsAndBiasesWriter:
             wb_kwargs["entity"] = config.habitat_baselines.wb.entity
         if config.habitat_baselines.wb.group != "":
             wb_kwargs["group"] = config.habitat_baselines.wb.group
+        if config.habitat_baselines.wb.run_id != "":
+            wb_kwargs["id"] = config.habitat_baselines.wb.run_id
+            wb_kwargs["resume"] = "allow"
         slurm_info_dict = {
             k[len("SLURM_") :]: v
             for k, v in os.environ.items()
@@ -155,6 +158,9 @@ class WeightsAndBiasesWriter:
 
     def add_scalar(self, key, value, step_id):
         wandb.log({key: value}, step=int(step_id))  # type: ignore[attr-defined]
+    
+    def add_aggregated_logs(self, aggregated_logs, step_id):
+        wandb.log(aggregated_logs, step=step_id)
 
     def __enter__(self):
         return self
@@ -169,4 +175,16 @@ class WeightsAndBiasesWriter:
     def add_video_from_np_images(
         self, video_name: str, step_idx: int, images: np.ndarray, fps: int = 10
     ) -> None:
-        raise NotImplementedError("Not supported")
+        if not self.run:
+            return
+        # initial shape of np.ndarray list: N * (H, W, 3)
+        frames = [
+            np.transpose(np_arr, axes=(2, 0, 1))  # (H, W, 3) -> (3, H, W)
+            for np_arr in images
+        ]  # N * (3, H, W)
+        frames = np.stack(frames, axis=0)
+        # final shape of np.ndarray: (N, 3, H, W)
+        wandb.log(
+            {f"rollout/{video_name}": wandb.Video(frames, fps=fps)},
+            step=step_idx
+        )
