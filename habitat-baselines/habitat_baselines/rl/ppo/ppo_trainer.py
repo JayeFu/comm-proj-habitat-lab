@@ -31,6 +31,7 @@ from habitat.utils.visualizations.utils import observations_to_image
 from habitat_baselines.common.base_trainer import BaseRLTrainer
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.construct_vector_env import construct_envs
+from habitat_baselines.common.eval_utils import EvaluationSaver
 from habitat_baselines.common.obs_transformers import (
     apply_obs_transforms_batch,
     apply_obs_transforms_obs_space,
@@ -933,6 +934,7 @@ class PPOTrainer(BaseRLTrainer):
                     self.save_checkpoint(
                         f"ckpt.{count_checkpoints}.pth",
                         dict(
+                            update=self.num_updates_done,
                             step=self.num_steps_done,
                             wall_time=(time.time() - self.t_start) + prev_time,
                         ),
@@ -944,6 +946,11 @@ class PPOTrainer(BaseRLTrainer):
                 self._train_utils.on_rollout_end()
 
             self.envs.close()
+
+            if self.config.habitat_baselines.launch_eval_afterwards:
+                self._train_utils.launch_evaluation_after_training(
+                    writer=writer,
+                )
 
     def _eval_checkpoint(
         self,
@@ -1063,6 +1070,11 @@ class PPOTrainer(BaseRLTrainer):
         ]  # type: List[List[np.ndarray]]
         if len(self.config.habitat_baselines.eval.video_option) > 0:
             os.makedirs(self.config.habitat_baselines.video_dir, exist_ok=True)
+        eval_saver = EvaluationSaver(
+            save_episode_id=0,
+            eval_log_fp=self.config.habitat_baselines.log_file,
+            disable_logging=self._disable_logging,
+        )
 
         number_of_eval_episodes = (
             self.config.habitat_baselines.test_episode_count
@@ -1178,6 +1190,14 @@ class PPOTrainer(BaseRLTrainer):
                     frame = overlay_frame(frame, infos[i])
                     rgb_frames[i].append(frame)
 
+                    eval_saver.add_observations(
+                        episode_id=current_episodes_info[i].episode_id,
+                        env_idx=i,
+                        batch=batch,
+                        not_done_masks=not_done_masks,
+                        infos=infos,
+                    )
+
                 # episode ended
                 if not not_done_masks[i].item():
                     pbar.update()
@@ -1213,6 +1233,12 @@ class PPOTrainer(BaseRLTrainer):
                         )
 
                         rgb_frames[i] = []
+
+                        eval_saver.save_video(
+                            episode_id=current_episodes_info[i].episode_id,
+                            video_option=self.config.habitat_baselines.eval.video_option,
+                            fps=self.config.habitat_baselines.video_fps,
+                        )
 
                     gfx_str = infos[i].get(GfxReplayMeasure.cls_uuid, "")
                     if gfx_str != "":
@@ -1260,6 +1286,10 @@ class PPOTrainer(BaseRLTrainer):
         if "extra_state" in ckpt_dict and "step" in ckpt_dict["extra_state"]:
             step_id = ckpt_dict["extra_state"]["step"]
 
+        update_id = checkpoint_index
+        if "extra_state" in ckpt_dict and "update" in ckpt_dict["extra_state"]:
+            update_id = ckpt_dict["extra_state"]["update"]
+
         writer.add_scalar(
             "eval_reward/average_reward", aggregated_stats["reward"], step_id
         )
@@ -1267,5 +1297,12 @@ class PPOTrainer(BaseRLTrainer):
         metrics = {k: v for k, v in aggregated_stats.items() if k != "reward"}
         for k, v in metrics.items():
             writer.add_scalar(f"eval_metrics/{k}", v, step_id)
+
+        eval_saver.write_eval_stats_to_disk(
+            aggregated_stats=aggregated_stats,
+            step=step_id,
+            update=update_id,
+            eval_log_fp=self.config.habitat_baselines.log_file
+        )
 
         self.envs.close()

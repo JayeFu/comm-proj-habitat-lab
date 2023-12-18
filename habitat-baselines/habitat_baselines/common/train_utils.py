@@ -288,11 +288,11 @@ class EvalMonitor:
         self._eval_videos_l.sort(key=lambda x: x["eval/update"])
 
         # Log eval stats into artifact
-        eval_stats_df = pd.DataFrame(self._eval_stats_l).set_index('eval/ckpt_idx')
-        writer.add_eval_stats(
-            eval_stats_df=eval_stats_df
-        )
-        time.sleep(sleep_sec)
+        # eval_stats_df = pd.DataFrame(self._eval_stats_l).set_index('eval/ckpt_idx')
+        # writer.add_eval_stats(
+        #     eval_stats_df=eval_stats_df
+        # )
+        # time.sleep(sleep_sec)
 
         # Log aggregated stats
         for eval_stats, eval_videos in zip(self._eval_stats_l, self._eval_videos_l):
