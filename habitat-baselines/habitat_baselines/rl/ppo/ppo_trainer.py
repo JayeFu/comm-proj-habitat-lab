@@ -657,6 +657,8 @@ class PPOTrainer(BaseRLTrainer):
     def _training_log(
         self, writer, losses: Dict[str, float], prev_time: int = 0
     ):
+        stats_logs: Dict[str, Any] = {}
+
         deltas = {
             k: (
                 (v[-1] - v[0]).sum().item()
@@ -667,11 +669,7 @@ class PPOTrainer(BaseRLTrainer):
         }
         deltas["count"] = max(deltas["count"], 1.0)
 
-        writer.add_scalar(
-            "reward",
-            deltas["reward"] / deltas["count"],
-            self.num_steps_done,
-        )
+        stats_logs["reward"] = deltas["reward"] / deltas["count"]
 
         # Check to see if there are any metrics
         # that haven't been logged yet
@@ -682,18 +680,21 @@ class PPOTrainer(BaseRLTrainer):
         }
 
         for k, v in metrics.items():
-            writer.add_scalar(f"metrics/{k}", v, self.num_steps_done)
+            stats_logs[f"metrics/{k}"] = v
         for k, v in losses.items():
-            writer.add_scalar(f"learner/{k}", v, self.num_steps_done)
+            stats_logs[f"learner/{k}"] = v
 
         fps = self.num_steps_done / ((time.time() - self.t_start) + prev_time)
-        writer.add_scalar("perf/fps", fps, self.num_steps_done)
+        stats_logs["perf/fps"] = fps
 
         # log stats
+        aggregated_logs: Dict[str, Any] = {}
         if (
             self.num_updates_done % self.config.habitat_baselines.log_interval
             == 0
         ):
+            aggregated_logs.update(stats_logs)
+
             logger.info(
                 "update: {}\tfps: {:.3f}\t".format(
                     self.num_updates_done,
@@ -721,6 +722,19 @@ class PPOTrainer(BaseRLTrainer):
                     ),
                 )
             )
+
+        if len(aggregated_logs) > 0:  # have sth to log        
+            aggregated_logs["update"] = self.num_updates_done
+            aggregated_logs["step"] = self.num_steps_done
+            if self.config.habitat_baselines.writer_type == "wb":
+                writer.add_aggregated_logs(
+                    aggregated_logs=aggregated_logs,
+                    step_id=self.num_updates_done
+                )
+            elif self.config.habitat_baselines.writer_type == "tb":
+                for k, v in aggregated_logs.items():
+                    if isinstance(v, (int, float, complex)):
+                        writer.add_scalar(k, v, self.num_updates_done)
 
     def should_end_early(self, rollout_step) -> bool:
         if not self._is_distributed:
