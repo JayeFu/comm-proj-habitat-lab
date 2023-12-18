@@ -401,6 +401,7 @@ class HabitatBaselinesConfig(HabitatBaselinesBaseConfig):
     checkpoint_interval: int = -1
     total_num_steps: float = -1.0
     log_interval: int = 10
+    video_interval: int = 150
     log_file: str = "train.log"
     force_blind_policy: bool = False
     verbose: bool = True

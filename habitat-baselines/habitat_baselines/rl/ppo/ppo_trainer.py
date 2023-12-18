@@ -41,6 +41,7 @@ from habitat_baselines.common.tensorboard_utils import (
     TensorboardWriter,
     get_writer,
 )
+from habitat_baselines.common.train_utils import TrainUtils
 from habitat_baselines.rl.ddppo.algo import DDPPO
 from habitat_baselines.rl.ddppo.ddp_utils import (
     EXIT,
@@ -102,6 +103,9 @@ class PPOTrainer(BaseRLTrainer):
         # greater than 1
         self._is_distributed = get_distrib_size()[2] > 1
 
+        self._train_utils: Optional[TrainUtils] = None
+        self._disable_logging = self.config.habitat_baselines.writer_type == "off"
+
     @property
     def obs_space(self):
         if self._obs_space is None and self.envs is not None:
@@ -134,7 +138,8 @@ class PPOTrainer(BaseRLTrainer):
         Returns:
             None
         """
-        logger.add_filehandler(self.config.habitat_baselines.log_file)
+        if not self._disable_logging:
+            logger.add_filehandler(self.config.habitat_baselines.log_file)
 
         policy = baseline_registry.get_policy(
             self.config.habitat_baselines.rl.policy.name
@@ -367,6 +372,12 @@ class PPOTrainer(BaseRLTrainer):
         self.pth_time = 0.0
         self.t_start = time.time()
 
+        self._train_utils = TrainUtils(
+            num_envs=self.envs.num_envs,
+            config=self.config,
+            disable_logging=self._disable_logging,
+        )
+
     @rank0_only
     @profiling_wrapper.RangeContext("save_checkpoint")
     def save_checkpoint(
@@ -581,6 +592,13 @@ class PPOTrainer(BaseRLTrainer):
 
         self.rollouts.advance_rollout(buffer_index)
 
+        self._train_utils.cache_train_videos(
+            batch=batch,
+            infos=infos,
+            dones=dones,
+            num_updates_done=self.num_updates_done
+        )
+
         self.pth_time += time.time() - t_update_stats
 
         return env_slice.stop - env_slice.start
@@ -722,6 +740,15 @@ class PPOTrainer(BaseRLTrainer):
                     ),
                 )
             )
+        
+        if (
+            self.num_updates_done % self.config.habitat_baselines.video_interval
+            == 0
+        ):
+            train_video_logs = self._train_utils.retrieve_train_videos(
+                env_idxs=[-1]  # retrieve all frames
+            )
+            aggregated_logs.update(train_video_logs)
 
         if len(aggregated_logs) > 0:  # have sth to log        
             aggregated_logs["update"] = self.num_updates_done
@@ -913,6 +940,8 @@ class PPOTrainer(BaseRLTrainer):
                     count_checkpoints += 1
 
                 profiling_wrapper.range_pop()  # train update
+
+                self._train_utils.on_rollout_end()
 
             self.envs.close()
 
