@@ -25,6 +25,8 @@ def get_writer(config, **kwargs):
         )
     elif config.habitat_baselines.writer_type == "wb":
         return WeightsAndBiasesWriter(config)
+    elif config.habitat_baselines.writer_type == "off":
+        return TurnOffWriter(config)
     else:
         raise ValueError("Unrecongized writer")
 
@@ -188,3 +190,31 @@ class WeightsAndBiasesWriter:
             {f"rollout/{video_name}": wandb.Video(frames, fps=fps)},
             step=step_idx
         )
+
+
+class TurnOffWriter:
+    def __init__(
+        self,
+        config
+    ) -> None:
+        self.config = config
+
+    def add_scalar(self, key, value, step_id):
+        pass
+
+    def add_aggregated_logs(self, aggregated_logs, step_id):
+        pass
+
+    def __enter__(self):
+        return self
+    
+    def get_run_id(self) -> Optional[str]:
+        return None
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        pass
+
+    def add_video_from_np_images(
+        self, video_name: str, step_idx: int, images: np.ndarray, fps: int = 10
+    ) -> None:
+        pass
