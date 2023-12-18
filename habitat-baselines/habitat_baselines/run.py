@@ -4,17 +4,22 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 import argparse
+import os
 import random
+from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 
 import numpy as np
 import torch
 
+from habitat.config import read_write
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.config.default import get_config
 
 if TYPE_CHECKING:
     from omegaconf import DictConfig
+
+BASE_SAVE_PATH = "./train_dir/"
 
 
 def build_parser(
@@ -38,6 +43,16 @@ def build_parser(
         help="path to config yaml containing info about experiment",
     )
     parser.add_argument(
+        "--resume_id",
+        type=str,
+        default=os.environ.get('JOB_UUID', None),
+    )
+    parser.add_argument(
+        "--ckpt_name",
+        type=str,
+        default=None
+    )
+    parser.add_argument(
         "opts",
         default=None,
         nargs=argparse.REMAINDER,
@@ -51,7 +66,7 @@ def main():
     parser = build_parser()
 
     args = parser.parse_args()
-    run_exp(**vars(args))
+    run_exp(args)
 
 
 def execute_exp(config: "DictConfig", run_type: str) -> None:
@@ -83,7 +98,7 @@ def execute_exp(config: "DictConfig", run_type: str) -> None:
         trainer.eval()
 
 
-def run_exp(exp_config: str, run_type: str, opts=None) -> None:
+def run_exp(args) -> None:
     r"""Runs experiment given mode and config
 
     Args:
@@ -94,8 +109,33 @@ def run_exp(exp_config: str, run_type: str, opts=None) -> None:
     Returns:
         None.
     """
-    config = get_config(exp_config, opts)
-    execute_exp(config, run_type)
+    config = get_config(args.exp_config, args.opts)
+    attempt_run_name = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+    with read_write(config):
+        # For logging
+        config.habitat_baselines.wb.project_name = "comm-proj"
+        config.habitat_baselines.wb.entity = "jiaweifu_ethz"
+        if config.habitat_baselines.wb.run_name == "":
+            config.habitat_baselines.wb.run_name = attempt_run_name
+        config.habitat_baselines.wb.run_id = args.resume_id
+
+        # For training specific
+        if args.run_type == 'train':
+            if not config.habitat.dataset.data_path.endswith('.json.gz'):
+                config.habitat.dataset.data_path = os.path.join(config.habitat.dataset.data_path, "{split}/{split}.json.gz")
+
+            config.habitat_baselines.tensorboard_dir = os.path.join(BASE_SAVE_PATH, args.resume_id, 'tb')
+            config.habitat_baselines.checkpoint_folder = os.path.join(BASE_SAVE_PATH, args.resume_id, 'checkpoint')
+            config.habitat_baselines.log_file = os.path.join(BASE_SAVE_PATH, args.resume_id, 'train.log')
+        
+        # For eval specific
+        if args.run_type == 'eval':
+            config.habitat_baselines.writer_type = 'tb'
+
+            config.habitat_baselines.load_resume_state_config = False
+
+    execute_exp(config, args.run_type)
 
 
 if __name__ == "__main__":

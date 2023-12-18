@@ -33,6 +33,8 @@ class WBConfig(HabitatBaselinesBaseConfig):
     # W&B will randomly assign a name.
     run_name: str = ""
 
+    run_id: str = ""
+
 
 @dataclass
 class EvalConfig(HabitatBaselinesBaseConfig):
