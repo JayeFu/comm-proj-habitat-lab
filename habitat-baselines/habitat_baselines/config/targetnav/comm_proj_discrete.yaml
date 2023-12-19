@@ -17,6 +17,7 @@ habitat:
 
 
 habitat_baselines:
+  writer_type: wb
   verbose: False
   trainer_name: "ppo"
   torch_gpu_id: 0
