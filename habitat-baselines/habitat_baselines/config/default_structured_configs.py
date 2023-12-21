@@ -197,6 +197,20 @@ cs.store(
 
 
 @dataclass
+class SelectObservationConfig(ObsTransformConfig):
+    type: str = "SelectObservation"
+    selected_keys: List[str] = field(default_factory=list)
+
+
+cs.store(
+    package="habitat_baselines.rl.policy.obs_transforms.select_observation",
+    group="habitat_baselines/rl/policy/obs_transforms",
+    name="select_observation_base",
+    node=SelectObservationConfig,
+)
+
+
+@dataclass
 class Eq2CubeConfig(ObsTransformConfig):
     type: str = "Equirect2CubeMap"
     height: int = 256

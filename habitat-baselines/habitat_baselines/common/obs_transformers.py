@@ -1277,3 +1277,44 @@ class AddVirtualKeys(ObservationTransformer):
     @classmethod
     def from_config(cls, config):
         return cls(config)
+
+
+@baseline_registry.register_obs_transformer()
+class SelectObservation(ObservationTransformer):
+    def __init__(
+        self,
+        selected_keys: List[str],
+    ) -> None:
+        super(SelectObservation, self).__init__()
+
+        self._selected_keys = selected_keys
+
+    def transform_observation_space(
+        self, 
+        observation_space: Dict,
+    ):
+        observation_space = copy.deepcopy(observation_space)
+        orig_obs_keys = list(observation_space.keys())
+
+        for key in orig_obs_keys:
+            if key not in self._selected_keys:
+                observation_space.spaces.pop(key)
+
+        return observation_space
+    
+    @torch.no_grad()
+    def forward(
+        self, observations: Dict[str, torch.Tensor]
+    ) -> Dict[str, torch.Tensor]:
+        orig_keys = list(observations.keys())
+        for key in orig_keys:
+            if key not in self._selected_keys:
+                observations.pop(key)
+
+        return observations
+    
+    @classmethod
+    def from_config(cls, config: "DictConfig"):
+        return cls(
+            config.selected_keys,
+        )
