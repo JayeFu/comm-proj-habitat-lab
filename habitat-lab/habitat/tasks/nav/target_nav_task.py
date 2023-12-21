@@ -105,7 +105,7 @@ class TargetNavigationTask(NavigationTask):
     def _add_target_to_goal_pos(self, episode: TargetNavigationEpisode):
         self._runtime_obj_mgr.delete_added_target()
         target_position = episode.goals[0].position.copy()
-        target_position[1] = 1.5  # hardcode to agent height
+        # target_position[1] = 1.5  # hardcode to agent height
         self._runtime_obj_mgr.add_target(
             target_path=episode.target_id,
             position=target_position,

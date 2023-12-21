@@ -6,4 +6,4 @@ defaults:
 
 type: TargetNav-v0
 split: train
-data_path: data/datasets/targetnav/empty_room_20_20/len_2.0_rem_0.6/{split}/{split}.json.gz
+data_path: data/datasets/targetnav/meeting_room_w_ceiling/empty/{split}/{split}.json.gz

@@ -19,6 +19,7 @@ from habitat.utils.runtime_objs import RunTimeObjectManager
 
 def _generate_fn(
         scene_template_fp: str, layout_fp: str, target_fp: str,
+        target_height: float,
         out_dir: str, env_idx: int,
         num_episodes: int
     ):
@@ -53,6 +54,7 @@ def _generate_fn(
 
     for ep in dset.episodes:
         ep.scene_id = ep.scene_id[len("./data/scene_datasets/"):]
+        ep.goals[0].position[1] = target_height
 
     out_file = osp.join(out_dir, f"env_{env_idx}.json.gz")
 
@@ -63,8 +65,8 @@ def _generate_fn(
 
 
 def generate_targetnav_dataset(
-        scene_template_fp: str, layout_dir: str, target_fp: str,
-        num_episodes: int = int(1e4), split: str = 'train'
+        scene_template_fp: str, layout_dir: str, target_fp: str, target_height: float,
+        num_envs: int, num_episodes: int = int(1e4), split: str = 'train'
 ):
     scene_name = scene_template_fp.split('/')[-1].split('.')[0]
     layout_name = layout_dir.split('/')[-1]
@@ -75,6 +77,11 @@ def generate_targetnav_dataset(
         if layout_fn.endswith('.json'):
             layout_fp = osp.join(layout_dir, layout_fn)
             layout_fp_l.append(layout_fp)
+
+    if len(layout_fp_l) == 1:
+        layout_fp_l = layout_fp_l * num_envs  # duplicate the only layout
+        print(f"Duplicate the only layout to {num_envs} layouts")
+    
     print(f"Total number of layouts: {len(layout_fp_l)}")
 
     out_dir = f"./data/datasets/targetnav/{scene_name}/{layout_name}/{split}/"
@@ -83,7 +90,7 @@ def generate_targetnav_dataset(
     os.makedirs(scene_out_dir, exist_ok=True)
 
     gen_args_l = [
-        (scene_template_fp, layout_fp, target_fp, scene_out_dir, idx, num_episodes)
+        (scene_template_fp, layout_fp, target_fp, target_height, scene_out_dir, idx, num_episodes)
         for idx, layout_fp in enumerate(layout_fp_l)
     ]
     with multiprocessing.Pool(8) as pool, tqdm(total=len(layout_fp_l)) as pbar:
@@ -100,6 +107,8 @@ def main():
     parser.add_argument("--scene_template", type=str, required=True)
     parser.add_argument("--layouts", type=str, required=True)
     parser.add_argument("--target", type=str, required=True)
+    parser.add_argument("--target_height", type=float, default=0.085)
+    parser.add_argument("--num_envs", type=int, default=10)
     parser.add_argument("--num_episodes", type=int, default=int(1e4))
     parser.add_argument("--version", type=int, default=0)
     parser.add_argument("--split", type=str, default='train')
@@ -109,6 +118,8 @@ def main():
         scene_template_fp=args.scene_template,
         layout_dir=args.layouts,
         target_fp=args.target,
+        target_height=args.target_height,
+        num_envs=args.num_envs,
         num_episodes=args.num_episodes,
         split=args.split
     )
