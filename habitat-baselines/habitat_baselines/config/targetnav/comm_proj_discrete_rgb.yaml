@@ -1,0 +1,14 @@
+# @package _global_
+
+defaults:
+  - comm_proj_discrete
+  - /habitat_baselines/rl/policy/obs_transforms:
+    - select_observation_base
+  - _self_
+
+habitat_baselines:
+  rl:
+    policy:
+      obs_transforms:
+        select_observation:
+          selected_keys: ['rgb']
