@@ -21,3 +21,9 @@ end_on_success: True
 reward_measure: "distance_to_goal_reward"
 success_measure: "euclidean_success"
 slack_reward: 0.0
+
+measurements:
+  euclidean_success:
+    success_distance: 0.4
+  nonstop_euclidean_success:
+    success_distance: 0.4

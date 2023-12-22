@@ -12,15 +12,17 @@ habitat:
   simulator:
     agents:
       main_agent:
+        height: 0.2
+        radius: 0.17
         sim_sensors:
           rgb_sensor:
             width: 128
             height: 128
-            position: [0.0, 0.17, 0.0]
+            position: [0.0, 0.0, 0.0]
             hfov: 69
           depth_sensor:
             width: 128
             height: 128
-            position: [0.0, 0.17, 0.0]
+            position: [0.0, 0.0, 0.0]
             hfov: 73
     forward_step_size: 0.1
