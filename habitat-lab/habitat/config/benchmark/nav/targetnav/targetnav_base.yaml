@@ -3,7 +3,7 @@
 defaults:
   - /habitat: habitat_config_base
   - /habitat/task: targetnav
-  - /habitat/simulator/agents@habitat.simulator.agents.main_agent: rgb_agent
+  - /habitat/simulator/agents@habitat.simulator.agents.main_agent: rgbd_agent
   - _self_
 
 habitat:
@@ -16,3 +16,10 @@ habitat:
           rgb_sensor:
             width: 128
             height: 128
+            position: [0.0, 0.17, 0.0]
+            hfov: 69
+          depth_sensor:
+            width: 128
+            height: 128
+            position: [0.0, 0.17, 0.0]
+            hfov: 73

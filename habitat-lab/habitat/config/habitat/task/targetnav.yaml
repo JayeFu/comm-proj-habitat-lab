@@ -1,13 +1,16 @@
 defaults:
   - task_config_base
   - actions:
+      - stop
       - move_forward
       - turn_left
       - turn_right
   - measurements:
       - distance_to_goal
       - euclidean_distance_to_goal
+      - euclidean_success
       - nonstop_euclidean_success
+      - euclidean_spl
       - nonstop_euclidean_spl
       - distance_to_goal_reward
       - top_down_map
@@ -16,5 +19,5 @@ defaults:
 type: TargetNav-v0
 end_on_success: True
 reward_measure: "distance_to_goal_reward"
-success_measure: "nonstop_euclidean_success"
+success_measure: "euclidean_success"
 slack_reward: 0.0
