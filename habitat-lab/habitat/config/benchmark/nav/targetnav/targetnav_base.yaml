@@ -23,3 +23,4 @@ habitat:
             height: 128
             position: [0.0, 0.17, 0.0]
             hfov: 73
+    forward_step_size: 0.1
