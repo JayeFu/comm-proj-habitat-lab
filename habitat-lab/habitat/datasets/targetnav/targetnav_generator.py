@@ -96,6 +96,9 @@ def generate_targetnav_episodes(
     while episode_count < num_episodes or num_episodes < 0:
         target_position = sim.sample_navigable_point()
 
+        while target_position[1] > 0.5:
+            target_position = sim.sample_navigable_point()
+
         if sim.island_radius(target_position) < ISLAND_RADIUS_LIMIT:
             continue
 
