@@ -49,6 +49,11 @@ class RunTimeObjectManager:
         self._navmesh_settings = habitat_sim.NavMeshSettings()
         self._navmesh_settings.set_defaults()
 
+        self._navmesh_settings.agent_height = 0.2
+        self._navmesh_settings.agent_radius = 0.17
+        self._navmesh_settings.cell_height = 0.05
+        self._navmesh_settings.cell_size = 0.02
+
         self._raw_tpl_ctrs: List[ObjectTemplateContainer] = []
         self._scaled_tpl_ctrs: List[ObjectTemplateContainer] = []
 
