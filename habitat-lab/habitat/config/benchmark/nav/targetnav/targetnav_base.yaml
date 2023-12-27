@@ -16,13 +16,13 @@ habitat:
         radius: 0.17
         sim_sensors:
           rgb_sensor:
-            width: 128
-            height: 128
+            width: 320
+            height: 240
             position: [0.0, 0.15, 0.0]
             hfov: 69
           depth_sensor:
-            width: 128
-            height: 128
+            width: 320
+            height: 240
             position: [0.0, 0.15, 0.0]
             hfov: 73
     forward_step_size: 0.1
