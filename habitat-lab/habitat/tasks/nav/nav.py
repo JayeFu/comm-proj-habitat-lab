@@ -121,6 +121,7 @@ class TargetNavigationEpisode(NavigationEpisode):
     """
 
     target_id: str = attr.ib(default=None, validator=not_none_validator)
+    target_scale: List[float] = attr.ib(default=[1.0, 1.0, 1.0], validator=not_none_validator)
     scene_layout_id: str = attr.ib(default=None, validator=not_none_validator)
     scene_layout: Optional[Dict[str, Any]] = None
 

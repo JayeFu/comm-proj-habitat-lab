@@ -88,7 +88,7 @@ class RunTimeObjectManager:
 
             self._added_obstacles.append(obstacle_obj)
 
-    def add_target(self, target_path: str, position: List[float]) -> None:
+    def add_target(self, target_path: str, position: List[float], scale: List[float]) -> None:
         target_obj = self._add_static_obj(
             obj_path=target_path,
             position=position,
@@ -96,7 +96,7 @@ class RunTimeObjectManager:
                 mn.Deg(0.0),
                 [0.0, 1.0, 0.0]
             ),  # Goal in PointNav has no rotation
-            scale=[1.0, 1.0, 1.0],  # Maybe various scales?
+            scale=scale,  # Maybe various scales?
         )
 
         self._added_target = target_obj

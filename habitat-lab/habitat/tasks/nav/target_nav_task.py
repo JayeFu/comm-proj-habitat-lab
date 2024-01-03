@@ -109,6 +109,7 @@ class TargetNavigationTask(NavigationTask):
         self._runtime_obj_mgr.add_target(
             target_path=episode.target_id,
             position=target_position,
+            scale=episode.target_scale,
         )
 
     def _add_layout_to_scene(self, episode: TargetNavigationEpisode):

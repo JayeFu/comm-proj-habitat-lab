@@ -1,7 +1,7 @@
 # Adapted from
 # https://github.com/facebookresearch/habitat-lab/blob/v0.2.3/habitat-lab/habitat/datasets/pointnav/pointnav_generator.py
 
-from typing import Dict, Generator, List, Optional, Union
+from typing import Dict, Generator, List, Optional, Tuple, Union
 
 import numpy as np
 
@@ -25,6 +25,7 @@ def _create_targetnav_episode(
     episode_id: Union[int, str],
     scene_id: str,
     target_id: str,
+    target_scale: List[float], 
     scene_layout_id: str,
     start_position: List[float],
     start_rotation: List[float],
@@ -39,6 +40,7 @@ def _create_targetnav_episode(
         goals=goals,
         scene_id=scene_id,
         target_id=target_id,
+        target_scale=target_scale,
         scene_layout_id=scene_layout_id,
         start_position=start_position,
         start_rotation=start_rotation,
@@ -50,6 +52,7 @@ def _create_targetnav_episode(
 def generate_targetnav_episodes(
     sim: "HabitatSim",
     target_id: str,
+    target_scale_range: Tuple[float, float],
     scene_layout_id: str,
     num_episodes: int = -1,
     is_gen_shortest_path: bool = True,
@@ -99,6 +102,8 @@ def generate_targetnav_episodes(
         while target_position[1] > 0.5:
             target_position = sim.sample_navigable_point()
 
+        target_scale = np.random.uniform(*target_scale_range)
+
         if sim.island_radius(target_position) < ISLAND_RADIUS_LIMIT:
             continue
 
@@ -140,6 +145,7 @@ def generate_targetnav_episodes(
                 episode_id=episode_count,
                 scene_id=sim.habitat_config.scene,
                 target_id=target_id,
+                target_scale=[target_scale] * 3,
                 scene_layout_id=scene_layout_id,
                 start_position=source_position,
                 start_rotation=source_rotation,
