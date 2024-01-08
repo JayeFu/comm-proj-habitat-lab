@@ -76,7 +76,7 @@ def create_layout_config(
 
         single_layout_cfg = [{
             "asset": asset_cfg["asset"],
-            "pos": list(obs_pos),
+            "pos": [obs_pos[0], asset_cfg["height"], obs_pos[2]],
             "rot_amount": rot_amount,
             "rot_vector": rot_vector,
             "scale": asset_cfg["scale"],
