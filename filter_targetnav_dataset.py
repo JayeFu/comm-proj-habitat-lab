@@ -18,6 +18,9 @@ class DatasetFilter:
         self._cfg_settings = \
             habitat_sim.utils.settings.default_sim_settings.copy()
         self._hab_cfg = habitat_sim.utils.settings.make_cfg(self._cfg_settings)
+        self._hab_cfg.agents[0].height = 0.2
+        self._hab_cfg.agents[0].radius = 0.17
+
         self._sim = habitat_sim.Simulator(self._hab_cfg)
         self._runtime_obj_mgr = RunTimeObjectManager(sim=self._sim)
         self._prev_scene_layout_id: Optional[str] = None
@@ -74,7 +77,7 @@ class DatasetFilter:
         self._runtime_obj_mgr.delete_added_target()
 
         target_pos = episode['goals'][0]['position'].copy()
-        target_pos[1] = 1.5
+        # target_pos[1] = 1.5
         self._runtime_obj_mgr.add_target(
             target_path=episode['target_id'],
             position=target_pos,
