@@ -17,7 +17,7 @@ from habitat.utils.runtime_objs import RunTimeObjectManager
 
 
 def _generate_fn(
-    scene_template_fp: str, layout_dir: str, target_fp: str, 
+    scene_template_fp: str, layout_dir: str, target_dir: str, 
     target_scale_range: Tuple[float, float],
     target_height_range: Tuple[float, float],
     out_dir: str, env_idx: int,
@@ -36,12 +36,18 @@ def _generate_fn(
     all_layout_fp_l = glob.glob(os.path.join(layout_dir, '*.json'))
     all_layout_fp_l.sort()
 
+    all_target_fp_l = glob.glob(os.path.join(target_dir, '*.glb'))
+    all_target_fp_l = [fp for fp in all_target_fp_l if 'collision' not in fp]
+
     dset = habitat.datasets.make_dataset("TargetNav-v0")
     for _ in range(num_episodes):
         layout_ind = np.random.randint(len(all_layout_fp_l))
         layout_fp = all_layout_fp_l[layout_ind]
         with open(layout_fp, 'r') as f:
             layout_cfg = json.load(f)
+        
+        target_ind = np.random.randint(len(all_target_fp_l))
+        target_fp = all_target_fp_l[target_ind]
 
         # Delete previous walls and obstacles
         runtime_obj_mgr.delete_added_obstacles()
@@ -94,8 +100,8 @@ def main():
         help='Version of dataset'
     )
     parser.add_argument(
-        '--target_fp', type=str, required=True,
-        help='Path to target object'
+        '--target_dir', type=str, required=True,
+        help='Directory containing target objects'
     )
     parser.add_argument(
         '--target_scale_range', type=float, nargs=2, required=True,
@@ -130,7 +136,7 @@ def main():
     os.makedirs(scene_out_dir, exist_ok=True)
 
     gen_args_l = [
-        (scene_template_fp, args.layout_dir, args.target_fp, args.target_scale_range, args.target_height_range, scene_out_dir, idx, args.num_episodes)
+        (scene_template_fp, args.layout_dir, args.target_dir, args.target_scale_range, args.target_height_range, scene_out_dir, idx, args.num_episodes)
         for idx, scene_template_fp in enumerate(scene_template_fp_l)
     ]
 
